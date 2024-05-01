@@ -1,0 +1,148 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scatter Plot Graph</title>
+  <style>
+  .container {
+  text-align: center;
+}
+
+#chart {
+  margin: 20px auto;
+  display: block;
+}
+
+.tooltip {
+  position: absolute;
+  background: #f4f4f4;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  pointer-events: none;
+}
+
+.dot {
+  fill: steelblue;
+}
+
+.dot:hover {
+  fill: orange;
+}
+
+.legend {
+  font-size: 12px;
+  text-anchor: start;
+}
+
+.legend rect {
+  fill: steelblue;
+}
+
+.legend text {
+  fill: black;
+}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 id="title">Doping in Professional Bicycle Racing</h1>
+    <svg id="chart"></svg>
+    <div id="tooltip" class="tooltip" style="opacity: 0;"></div>
+    <div id="legend"></div>
+  </div>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+// Define dimensions and margins for the chart
+const margin = { top: 50, right: 50, bottom: 70, left: 70 };
+const width = 800 - margin.left - margin.right;
+const height = 500 - margin.top - margin.bottom;
+
+// Append SVG to the container
+const svg = d3.select("#chart")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+  .attr("transform", `translate(${margin.left},${margin.top})`);
+
+// Fetch and process the data
+d3.json("https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/cyclist-data.json")
+  .then(data => {
+    data.forEach(d => {
+      d.Place = +d.Place;
+      d.Seconds = +d.Seconds;
+      const parsedTime = d.Time.split(":");
+      d.Time = new Date(0, 0, 0, 0, parsedTime[0], parsedTime[1]);
+    });
+
+    // Define scales
+    const xScale = d3.scaleLinear()
+      .domain([d3.min(data, d => d.Year - 1), d3.max(data, d => d.Year + 1)])
+      .range([0, width]);
+
+    const yScale = d3.scaleTime()
+      .domain(d3.extent(data, d => d.Time))
+      .range([0, height]);
+
+    // Define axes
+    const xAxis = d3.axisBottom(xScale).tickFormat(d3.format("d"));
+    const yAxis = d3.axisLeft(yScale).tickFormat(d3.timeFormat("%M:%S"));
+
+    // Append axes
+    svg.append("g")
+      .attr("id", "x-axis")
+      .attr("transform", `translate(0, ${height})`)
+      .call(xAxis);
+
+    svg.append("g")
+      .attr("id", "y-axis")
+      .call(yAxis);
+
+    // Append dots
+    svg.selectAll(".dot")
+      .data(data)
+      .enter()
+      .append("circle")
+      .attr("class", "dot")
+      .attr("cx", d => xScale(d.Year))
+      .attr("cy", d => yScale(d.Time))
+      .attr("r", 5)
+      .attr("data-xvalue", d => d.Year)
+      .attr("data-yvalue", d => d.Time.toISOString())
+      .on("mouseover", (event, d) => {
+        tooltip.style("opacity", 0.9);
+        tooltip.html(`${d.Name}: ${d.Nationality}<br>Year: ${d.Year}, Time: ${d.Time.toISOString().slice(14, 19)}`)
+          .attr("data-year", d.Year)
+          .style("left", event.pageX + "px")
+          .style("top", event.pageY - 28 + "px");
+      })
+      .on("mouseout", () => {
+        tooltip.style("opacity", 0);
+      });
+
+    // Append legend
+    const legend = d3.select("#legend")
+      .selectAll(".legend")
+      .data(["No doping allegations", "Riders with doping allegations"])
+      .enter().append("div")
+      .attr("class", "legend")
+      .style("padding", "5px");
+
+    legend.append("div")
+      .attr("class", "legend-rect")
+      .style("display", "inline-block")
+      .style("width", "10px")
+      .style("height", "10px")
+      .style("margin-right", "5px")
+      .style("background-color", (_, i) => (i === 0 ? "steelblue" : "orange"));
+
+    legend.append("div")
+      .attr("class", "legend-text")
+      .text(d => d);
+  })
+  .catch(error => console.error(error));
+  </script>
+</body>
+</html>
+
